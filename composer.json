@@ -1,6 +1,6 @@
 {
     "name": "wplibs/session",
-    "description": "The missing Session Manager for WordPress",
+    "description": "The missing session handler in WordPress",
     "type": "library",
     "license": "MIT",
     "authors": [

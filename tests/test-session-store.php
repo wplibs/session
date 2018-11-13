@@ -6,6 +6,7 @@ use WPLibs\Session\Store;
 class Session_Store_Test extends WP_UnitTestCase {
 
 	public function tearDown() {
+		parent::tearDown();
 		m::close();
 	}
 

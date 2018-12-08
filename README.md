@@ -1,7 +1,12 @@
 # WP Session [![Build Status](https://travis-ci.org/wplibs/session.svg?branch=master)](https://travis-ci.org/wplibs/session)
 
-The missing Session Manager for WordPress
+The missing Session manager for WordPress
 
+## Installation
+
+```
+composer require wplibs/session:^1.0
+```
 
 ## Usage
 

@@ -54,7 +54,7 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 */
 	public function hooks() {
 		// Start and commit the session.
-		add_action( 'plugins_loaded', [ $this, 'start_session' ] );
+		add_action( 'init', [ $this, 'start_session' ], 0 );
 		add_action( 'shutdown', [ $this, 'commit_session' ] );
 
 		// Register the garbage collector.
@@ -71,7 +71,6 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 */
 	public function start_session() {
 		$session = $this->get_store();
-
 		$session_name = $this->config['cookie_name'];
 
 		$session->set_id(
@@ -157,7 +156,7 @@ class WP_Session implements \ArrayAccess, \Countable {
 	/**
 	 * Get the session implementation.
 	 *
-	 * @return Session
+	 * @return \WPLibs\Session\Store|\WPLibs\Session\Session
 	 */
 	public function get_store() {
 		return $this->session;

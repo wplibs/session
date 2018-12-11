@@ -83,7 +83,7 @@ class WP_Session implements \ArrayAccess, \Countable {
 			// Add the session identifier to cookie, so we can re-use that in lifetime.
 			$expiration_date = $this->config['expire_on_close'] ? 0 : time() + $this->lifetime_in_seconds();
 
-			setcookie( $session->get_name(), $session->get_id(), $expiration_date, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl() );
+			setcookie( $session_name, $session->get_id(), $expiration_date, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl() );
 		}
 	}
 

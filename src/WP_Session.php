@@ -23,8 +23,9 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 * @var array
 	 */
 	protected $config = [
-		'lifetime'        => 1440,  // The session lifetime in minutes.
+		'lifetime'        => 120,  // The session lifetime in minutes.
 		'expire_on_close' => false, // If true, the session immediately expire on the browser closing.
+		'lottery'         => [ 2, 100 ],
 		'cookie_name'     => null,
 	];
 
@@ -54,7 +55,7 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 */
 	public function hooks() {
 		// Start and commit the session.
-		add_action( 'init', [ $this, 'start_session' ], 0 );
+		$this->start_session();
 		add_action( 'shutdown', [ $this, 'commit_session' ] );
 
 		// Register the garbage collector.
@@ -70,20 +71,24 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function start_session() {
-		$session = $this->get_store();
-		$session_name = $this->config['cookie_name'];
+		// No session in the cron.
+		if ( defined( 'DOING_CRON' ) ) {
+			return;
+		}
 
-		$session->set_id(
-			isset( $_COOKIE[ $session_name ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ $session_name ] ) ) : null
-		);
+		$session     = $this->get_store();
+		$cookie_name = $this->config['cookie_name'];
+
+		if ( isset( $_COOKIE[ $cookie_name ] ) ) {
+			$session->set_id( sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) ) );
+		}
 
 		$session->start();
 
+		// Add the session identifier to cookie, so we can re-use that in lifetime.
 		if ( ! $this->running_in_cli() ) {
-			// Add the session identifier to cookie, so we can re-use that in lifetime.
 			$expiration_date = $this->config['expire_on_close'] ? 0 : time() + $this->lifetime_in_seconds();
-
-			setcookie( $session_name, $session->get_id(), $expiration_date, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl() );
+			setcookie( $cookie_name, $session->get_id(), $expiration_date, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl() );
 		}
 	}
 
@@ -121,8 +126,28 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 * @access private
 	 */
 	public function register_garbage_collection() {
+		// Here we will see if this request hits the garbage collection lottery by hitting
+		// the odds needed to perform garbage collection on any given request. If we do
+		// hit it, we'll call this handler to let it delete all the expired sessions.
+		if ( $this->config_hits_lottery() ) {
+			$this->cleanup_expired_sessions();
+		}
+
 		if ( ! wp_next_scheduled( $schedule = $this->get_schedule_name() ) ) {
 			wp_schedule_event( time(), 'hourly', $schedule );
+		}
+	}
+
+	/**
+	 * Determine if the configuration odds hit the lottery.
+	 *
+	 * @return bool
+	 */
+	protected function config_hits_lottery() {
+		try {
+			return random_int( 1, $this->config['lottery'][1] ) <= $this->config['lottery'][0];
+		} catch ( \Exception $e ) {
+			return false;
 		}
 	}
 

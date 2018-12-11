@@ -62,7 +62,7 @@ class Store implements Session {
 	public function start() {
 		$data = $this->handler->read( $this->get_id() );
 
-		if ( false !== $data && ! is_null( $data ) && is_array( $data ) ) {
+		if ( $data && is_array( $data ) ) {
 			$this->attributes = $data;
 		}
 

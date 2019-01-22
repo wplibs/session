@@ -71,7 +71,7 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function start_session() {
-		// No session in the cron.
+		// Prevent session in the cron.
 		if ( defined( 'DOING_CRON' ) ) {
 			return;
 		}
@@ -79,11 +79,16 @@ class WP_Session implements \ArrayAccess, \Countable {
 		$session     = $this->get_store();
 		$cookie_name = $this->config['cookie_name'];
 
-		if ( isset( $_COOKIE[ $cookie_name ] ) ) {
-			$session->set_id( sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) ) );
-		}
+		if ( ! $session->is_started() ) {
+			$session_id = is_user_logged_in() ? sha1( get_current_user_id() ) : null;
 
-		$session->start();
+			if ( isset( $_COOKIE[ $cookie_name ] ) ) {
+				$session_id = sanitize_text_field( wp_unslash( $_COOKIE[ $cookie_name ] ) );
+			}
+
+			$session->set_id( $session_id );
+			$session->start();
+		}
 
 		// Add the session identifier to cookie, so we can re-use that in lifetime.
 		if ( ! $this->running_in_cli() ) {
@@ -100,7 +105,13 @@ class WP_Session implements \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function commit_session() {
-		$this->get_store()->save();
+		if ( defined( 'DOING_CRON' ) || $this->running_in_cli() ) {
+			return;
+		}
+
+		if ( ! empty( $_COOKIE[ $this->config['cookie_name'] ] ) ) {
+			$this->get_store()->save();
+		}
 	}
 
 	/**
